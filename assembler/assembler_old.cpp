@@ -13,10 +13,8 @@ size_t SIZE_COMMAND_VERSION    = 1;
 
 size_t SIZE_PROGRAM_SIZE_CONST = 8;
 
-size_t MAX_COMMAND_SIZE        = 30;
-
 struct goto_flug{
-    KR_string name;
+    char *name;
     size_t ptr;
 };
 
@@ -47,6 +45,7 @@ int main(int argc, const char *argv[]) {
     assert(file_out_path != nullptr);
     
     write_commands_to_file(file_out_path, program, program_size);
+    printf("2");
 }
 
 size_t text_to_program(char **program, KR_string *text, size_t text_size) {
@@ -57,29 +56,35 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
     
     size_t program_size = SIZE_SIGNATURE + SIZE_COMMAND_VERSION + SIZE_PROGRAM_SIZE_CONST;
 
-    char *cmd = (char *)calloc(MAX_COMMAND_SIZE, 1);
-
     for (int i = 0; i < text_size; i++) {
         bool jmp_m = false;
         
         for (char *cmd_ptr = text[i].ptr; cmd_ptr <= text[i].ptr_end; cmd_ptr++) {
             if (*cmd_ptr == ':') {
-                end_flugs->name.ptr     = text[i].ptr;
-                end_flugs->name.ptr_end = cmd_ptr;
+                end_flugs->name = (char *)calloc(MAX_MET_SIZE, sizeof(char));
+                assert(end_flugs->name != nullptr);
+
+                char *name_ptr = end_flugs->name;
+
+                //KR_strncpy(name_ptr, text[i].ptr, cmd_ptr - text[i].ptr);
+
+                for (char *m_ptr = text[i].ptr; m_ptr < cmd_ptr; m_ptr++) {
+                    *(name_ptr++) = *(m_ptr);
+                }
 
                 end_flugs->ptr = program_size;
 
                 end_flugs++;
 
                 jmp_m = true;
-
-                break;
             }
         }
 
         if (jmp_m) {
             continue;
         }
+
+        char *cmd = (char *)calloc(10, 1);
 
         size_t cmd_size = 0;
 
@@ -94,12 +99,8 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
         #undef DEF_CMD
 
         program_size += cmd_size;
-        
-        if (i % 1000000 == 0) {
-            printf("\r%d", i);
-        }
+        free(cmd);
     }
-    printf("\n");
 
     *program = (char *)calloc(program_size, sizeof(char));
     assert(*program != nullptr);
@@ -113,7 +114,7 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
     for (size_t i = 0; i < sizeof(size_t); i++) {
         *(program_ptr++) = ((char *)(&program_size))[i];
     }
-    
+
     for (int i = 0; i < text_size; i++) {
         bool jmp_m = false;
 
@@ -136,17 +137,13 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
         #undef DEF_CMD
 
         program_ptr += cmd_size;
-        if (i % 1000000 == 0) {
-            printf("\r%d", i);
-        }
     }
 
     return program_size;
 }
 
 void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size) {
-    static char *txt = (char *)calloc(MAX_COMMAND_SIZE, 1);
-    char *old_txt = txt;
+    char *txt = (char *)calloc(text.ptr_end - text.ptr + 1, 1);
     char *txt_end = txt + (text.ptr_end - text.ptr);
 
     for (int i = 0; i < text.ptr_end - text.ptr + 1; i++) {
@@ -154,8 +151,7 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
     }
 
     size_t n = 0;
-
-    static char *command = (char *)calloc(MAX_COMMAND_SIZE, 1);
+    char *command = (char *)calloc(text.ptr_end - text.ptr + 1, 1);
     sscanf(txt, "%s%n", command, &n);
 
     txt += n;
@@ -178,7 +174,7 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
     int integer = 0;
 
     size_t n_s = 0;
-    static char *param = (char *)calloc(MAX_COMMAND_SIZE, 1);
+    char *param = (char *)calloc(text.ptr_end - text.ptr + 1, 1);
 
     for (int i = 0; i < 2; i++){ 
         int rez = 0;
@@ -192,7 +188,7 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
             else {
                 integer = -1;
                 for (goto_flug *it = goto_flugs; it < jmp; it++) {
-                    if (KR_strcmp(param, it->name) == 0) {
+                    if (strncmp(param, it->name, MAX_MET_SIZE) == 0) {
                         integer = it->ptr;
                     }
                 }
@@ -233,7 +229,6 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
             (*size)++;
         }
     }
-    txt = old_txt;
 }
 
 void write_commands_to_file(const char *file_out_path, char *program, size_t commands_size) {

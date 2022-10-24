@@ -4,19 +4,40 @@
 #include "scpu.h"
 #include <math.h>
 #include <SFML/Graphics.hpp>
+#include <limits>
 
 #define Type_t int
 #include "../stack/stack.h"
 
+const int MEM_H = 200;
+
+const int MEM_W = 320;
+
+const int PIXEL_SIZE = 4;
+
+const int FPS = 10;
+
+struct Cpu {
+    size_t program_size;
+    char *program;
+    size_t ip;
+    Stack stack;
+    Stack calls;
+    int REG[5];
+    int RAM[MEM_H * MEM_W];
+};
+
 void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG, int *RAM, Stack *stack);
 
-int * get_ptr_arg(char *program, int *REG, int *RAM, size_t *ip);
+int * get_ptr_arg(Cpu *cpu);
+
+int init_cpu(Cpu *cpu, FILE* program_file);
+
+void cpu_des(Cpu *cpu);
+
+int do_cpu(Cpu *cpu);
 
 int main(int argc, const char *argv[]) {
-    sf::RenderWindow window(sf::VideoMode(320*4, 200*4), "Test Window");
-    window.setFramerateLimit(10);
-    sf::VertexArray pointmap(sf::Points, 320*4 * 200*4);
-
     const char *file_in_path = nullptr;
 
     get_infile_name_from_flug(&file_in_path, argc, argv);
@@ -25,48 +46,25 @@ int main(int argc, const char *argv[]) {
     FILE *program_file = fopen(file_in_path, "rb");
     assert(program_file != nullptr);
 
-    char *file_type = (char *)calloc(2, sizeof(char));
-    assert(file_type != nullptr);
+    Cpu cpu = {0};
 
-    fread(file_type, sizeof(char), 2, program_file);
-
-    if (file_type[0] != 'K' || file_type[1] != 'C') {
-        printf("NOT COMPILE TYPE FILE");
+    if (init_cpu(&cpu, program_file)) {
+        cpu_des(&cpu);
         return 0;
     }
 
-    char command_version = 0;
-    fread(&command_version, sizeof(char), 1, program_file);
+    do_cpu(&cpu);
 
-    if ((COMMAND_VERSION) != ((unsigned int)(unsigned char)command_version)) {
-        printf("unsupported version of commands");
-        return 0;
-    }
+    cpu_des(&cpu);
+}
 
-    size_t program_size = 0;
-    fread((char *)(&program_size), 4, 1, program_file);
-
-    fseek(program_file, 0, SEEK_SET);
-
-    char *program = (char *) calloc(program_size, sizeof(char));
-    assert(program != nullptr);
-
-    fread(program, program_size, sizeof(char), program_file);
-
-    size_t ip = BEGIN_PROGRAM_PTR;
-
-    Stack stack = {};
-    stack_create(&stack);
-
-    Stack calls = {};
-    stack_create(&calls);
-
-    int REG[5] = {0};
-
-    int RAM[320*200] = {0};
+int do_cpu(Cpu *cpu) {
+    sf::RenderWindow window(sf::VideoMode(MEM_W * PIXEL_SIZE, MEM_H * PIXEL_SIZE), "Test Window");
+    window.setFramerateLimit(10);
+    sf::VertexArray pointmap(sf::Points, MEM_W * PIXEL_SIZE * MEM_H * PIXEL_SIZE);
 
     while(true) {
-        switch (program[ip++]) {
+        switch (cpu->program[cpu->ip++]) {
             #define DEF_CMD(CMD, NUM, ARG, CODE) case NUM: {CODE}
 
             #include "../commands/commands.h"
@@ -74,8 +72,8 @@ int main(int argc, const char *argv[]) {
             #undef DEF_CMD
 
             default: {
-                printf("command_not_found ip:%d", ip-1);
-                return 0;
+                printf("command_not_found ip:%d\n", cpu->ip-1);
+                return 1;
                 break;
             }
         }
@@ -88,9 +86,62 @@ int main(int argc, const char *argv[]) {
             }
         }
     }
+
     if (window.isOpen()) {
         window.close();
     }
+    return 0;
+}
+
+void cpu_des(Cpu *cpu) {
+    free(cpu->program);
+}
+
+int init_cpu(Cpu *cpu, FILE *program_file) {
+    assert(program_file != nullptr);
+
+    char *file_type = (char *)calloc(2, sizeof(char));
+    assert(file_type != nullptr);
+
+    fread(file_type, sizeof(char), 2, program_file);
+
+    if (file_type[0] != 'K' || file_type[1] != 'C') {
+        printf("NOT COMPILE TYPE FILE");
+        return 1;
+    }
+
+    char command_version = 0;
+    fread(&command_version, sizeof(char), 1, program_file);
+
+    if ((COMMAND_VERSION) != ((unsigned int)(unsigned char)command_version)) {
+        printf("unsupported version of commands");
+        return 1;
+    }
+
+    fread((char *)(&(cpu->program_size)), 4, 1, program_file);
+
+    fseek(program_file, 0, SEEK_SET);
+
+    cpu->program = (char *) calloc(cpu->program_size, sizeof(char));
+    assert(cpu->program != nullptr);
+
+    fread(cpu->program, cpu->program_size, sizeof(char), program_file);
+
+    cpu->ip = BEGIN_PROGRAM_PTR;
+
+    stack_create(&(cpu->stack));
+
+    stack_create(&(cpu->calls));
+
+    for (int i = 0; i < 5 ; i++) {
+        cpu->REG[i] = 0;
+    }
+
+    for (size_t i = 0; i < MEM_W * MEM_H ; i++) {
+        cpu->RAM[i] = 0;
+    }
+
+    return 0;
 }
 
 void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG, int *RAM, Stack *stack) {
@@ -129,31 +180,31 @@ void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG
     *a = stack_pop(stack); 
 }
 
-int * get_ptr_arg(char *program, int *REG, int *RAM, size_t *ip) {
+int * get_ptr_arg(Cpu *cpu) {
     int inte = 0;
     int *ret = 0;
 
-    char cmd_param = program[(*ip)++];
+    char cmd_param = cpu->program[(cpu->ip)++];
 
     if (cmd_param & REG_MASK) {
-        ret = &REG[program[(*ip)++]];
+        ret = &cpu->REG[cpu->program[(cpu->ip)++]];
         inte = *ret;
     }
 
     if (cmd_param & INT_MASK) {
-        inte = *((int *)(&program[*ip]));
-        *ip += 4;
+        inte = *((int *)(&cpu->program[cpu->ip]));
+        cpu->ip += 4;
 
         if (cmd_param & REG_MASK) {
             inte += *ret;
         }
 
-        REG[0] = inte;
-        ret = &(REG[0]);
+        cpu->REG[0] = inte;
+        ret = &(cpu->REG[0]);
     }
 
     if (cmd_param & MEM_MASK) {
-        ret = &(RAM[inte]);
+        ret = &(cpu->RAM[inte]);
     }
 
     return ret;
