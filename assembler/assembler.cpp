@@ -14,7 +14,7 @@ size_t SIZE_COMMAND_VERSION    = 1;
 size_t SIZE_PROGRAM_SIZE_CONST = 8;
 
 struct goto_flug{
-    char *name;
+    KR_string name;
     size_t ptr;
 };
 
@@ -60,22 +60,16 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
         
         for (char *cmd_ptr = text[i].ptr; cmd_ptr <= text[i].ptr_end; cmd_ptr++) {
             if (*cmd_ptr == ':') {
-                end_flugs->name = (char *)calloc(MAX_MET_SIZE, sizeof(char));
-                assert(end_flugs->name != nullptr);
-
-                char *name_ptr = end_flugs->name;
-
-                KR_strncpy(name_ptr, text[i].ptr, cmd_ptr - text[i].ptr);
-
-                // for (char *m_ptr = text[i].ptr; m_ptr < cmd_ptr; m_ptr++) {
-                //     *(name_ptr++) = *(m_ptr);
-                // }
+                end_flugs->name.ptr     = text[i].ptr;
+                end_flugs->name.ptr_end = cmd_ptr;
 
                 end_flugs->ptr = program_size;
 
                 end_flugs++;
 
                 jmp_m = true;
+
+                break;
             }
         }
 
@@ -150,8 +144,10 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
     }
 
     size_t n = 0;
+
     char *command = (char *)calloc(text.ptr_end - text.ptr + 1, 1);
     sscanf(txt, "%s%n", command, &n);
+    free(command);
 
     txt += n;
 
@@ -187,7 +183,7 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
             else {
                 integer = -1;
                 for (goto_flug *it = goto_flugs; it < jmp; it++) {
-                    if (strncmp(param, it->name, MAX_MET_SIZE) == 0) {
+                    if (KR_strcmp(param, it->name) == 0) {
                         integer = it->ptr;
                     }
                 }
@@ -228,6 +224,8 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
             (*size)++;
         }
     }
+    free(command);
+    free(param);
 }
 
 void write_commands_to_file(const char *file_out_path, char *program, size_t commands_size) {

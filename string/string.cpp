@@ -183,6 +183,28 @@ int KR_strcmp(char *s1, char *s2) {
     return 0;
 }
 
+int KR_strcmp(char *s1, KR_string s2) {
+    assert(s1 != nullptr);
+
+    assert(s2.ptr     != nullptr);
+    assert(s2.ptr_end != nullptr);
+
+    int i = 0; // (-1)++ = 0 -> first element
+    while (s1[i] != 0 && s2.ptr + i < s2.ptr_end) {
+        if (s1[i] < s2.ptr[i]) {
+            return -1;
+        }
+        else if (s1[i] > s2.ptr[i]) {
+            return 1;
+        }
+        i++;
+    }
+    if (s1[i] == 0 && s2.ptr + i == s2.ptr_end) {
+        return 0;
+    }
+    return 1;
+}
+
 int KR_strcmp_letonly(char *s1, char *s2) {
     assert(s1 != nullptr);
     assert(s2 != nullptr);
