@@ -74,39 +74,9 @@ DEF_CMD(hell, 7, 0, {   printf("END PROGRAM\n");
                         break;
                     })
 
-DEF_CMD(jmp, 8, 1, {    char cmd_param = cpu->program[(cpu->ip)++];
-                        int arg = 0;
-                        char reg = 0;
-                        int inte = 0;
+DEF_CMD(jmp, 8, 1, {    int *arg = get_ptr_arg(cpu);
 
-                        if (cmd_param & REG_MASK) {
-                            reg = cpu->program[(cpu->ip)++];
-                            if (reg < 1 || reg > 4) {
-                                printf("error in reg number, number reg is %d", reg);
-                                return 0;
-                            }
-
-                            arg = cpu->REG[reg];
-                        }
-                
-                        if (cmd_param & INT_MASK) {
-                            for (size_t i = 0; i < sizeof(int); i++) {
-                                ((char *)(&inte))[i] = cpu->program[(cpu->ip)++];
-                            }
-
-                            if (cmd_param & REG_MASK) {
-                                arg += inte;
-                            }
-                            else {
-                                arg = inte;
-                            }
-                        }
-
-                        if (cmd_param & MEM_MASK) {
-                            arg = cpu->RAM[arg];
-                        }
-
-                        cpu->ip = arg;
+                        cpu->ip = *arg;
 
                         break;
                     })
@@ -140,13 +110,19 @@ DEF_CMD(call, 10, 1, {  char cmd_param = cpu->program[(cpu->ip)++];
                         break;
                     })
 
-DEF_CMD(ret, 11, 0, {if (cpu->calls.size == 0) {printf("error ret ip:%d", cpu->ip);return 0;}cpu->ip = stack_pop(&(cpu->calls));break;})
+DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
+                            printf("error ret ip:%d", cpu->ip);
+                            return 0;
+                        }
+                        cpu->ip = stack_pop(&(cpu->calls));
+                        break;
+                    })
 
 DEF_CMD(jb, 12, 1, {    int a = 0;
                         int b = 0;
                         int arg = 0;
 
-                        get_jmp_param(&(cpu->ip), &a, &b, &arg, cpu->program, cpu->REG, cpu->RAM, &(cpu->stack));
+                        get_jmp_param(&a, &b, &arg, cpu);
     
                         if (a < b) {
                             cpu->ip = arg;
@@ -197,7 +173,7 @@ DEF_CMD(je, 15, 1, {    int a = 0;
                         int b = 0;
                         int arg = 0;
 
-                        get_jmp_param(&(cpu->ip), &a, &b, &arg, cpu->program, cpu->REG, cpu->RAM, &(cpu->stack));
+                        get_jmp_param(&a, &b, &arg, cpu);
     
                         if (a == b) {
                             cpu->ip = arg;

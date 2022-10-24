@@ -27,7 +27,7 @@ struct Cpu {
     int RAM[MEM_H * MEM_W];
 };
 
-void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG, int *RAM, Stack *stack);
+void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu);
 
 int * get_ptr_arg(Cpu *cpu);
 
@@ -144,24 +144,24 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
     return 0;
 }
 
-void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG, int *RAM, Stack *stack) {
-    char cmd_param = program[(*ip)++];
+void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu) {
+    char cmd_param = cpu->program[(cpu->ip)++];
     char reg = 0;
     int inte = 0;
 
     if (cmd_param & REG_MASK) {
-        reg = program[(*ip)++];
+        reg = cpu->program[(cpu->ip)++];
         if (reg < 1 || reg > 4) {
-            printf("error in reg number, number reg is %d in ip:%d", reg, ip - 2);
+            printf("error in reg number, number reg is %d in ip:%d", reg, cpu->ip - 2);
             assert(reg < 1 || reg > 4);
         }
 
-        *arg = REG[reg];
+        *arg = cpu->REG[reg];
     }
 
     if (cmd_param & INT_MASK) {
         for (size_t i = 0; i < sizeof(int); i++) {
-            ((char *)(&inte))[i] = program[(*ip)++];
+            ((char *)(&inte))[i] = cpu->program[(cpu->ip)++];
         }
 
         if (cmd_param & REG_MASK) {
@@ -173,11 +173,11 @@ void get_jmp_param(size_t *ip, int *a, int *b, int *arg, char *program, int *REG
     }
 
     if (cmd_param & MEM_MASK) {
-        *arg = RAM[*arg];
+        *arg = cpu->RAM[*arg];
     }
 
-    *b = stack_pop(stack);
-    *a = stack_pop(stack); 
+    *b = stack_pop(&cpu->stack);
+    *a = stack_pop(&cpu->stack); 
 }
 
 int * get_ptr_arg(Cpu *cpu) {
