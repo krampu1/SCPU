@@ -155,8 +155,8 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
 
     size_t n = 0;
 
-    static char *command = (char *)calloc(MAX_COMMAND_SIZE, 1);
-    sscanf(txt, "%s%n", command, &n);
+    static char *param = (char *)calloc(MAX_COMMAND_SIZE, 1);
+    sscanf(txt, "%s%n", param, &n);
 
     txt += n;
 
@@ -178,7 +178,6 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
     int integer = 0;
 
     size_t n_s = 0;
-    static char *param = (char *)calloc(MAX_COMMAND_SIZE, 1);
 
     for (int i = 0; i < 2; i++){ 
         int rez = 0;

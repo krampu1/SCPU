@@ -10,7 +10,8 @@ DEF_CMD(push, 1, 1, {   int *arg = get_ptr_arg(cpu);
 
 DEF_CMD(add, 2, 0, {    if (cpu->stack.size < 2) {
                             printf("ERROR in add ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            return 0;
+                            end_flug = true;
+                            break;
                         }
 
                         stack_push(&(cpu->stack), stack_pop(&(cpu->stack)) + stack_pop(&(cpu->stack)));
@@ -20,7 +21,8 @@ DEF_CMD(add, 2, 0, {    if (cpu->stack.size < 2) {
 
 DEF_CMD(sup, 3, 0, {    if (cpu->stack.size < 2) {
                             printf("ERROR in sup ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            return 0;
+                            end_flug = true;
+                            break;
                         }
 
                         int b = stack_pop(&(cpu->stack));
@@ -33,7 +35,8 @@ DEF_CMD(sup, 3, 0, {    if (cpu->stack.size < 2) {
 
 DEF_CMD(mul, 4, 0, {    if (cpu->stack.size < 2) {
                             printf("ERROR in mul ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            return 0;
+                            end_flug = true;
+                            break;
                         }
 
                         stack_push(&(cpu->stack), stack_pop(&(cpu->stack)) * stack_pop(&(cpu->stack)));
@@ -43,7 +46,8 @@ DEF_CMD(mul, 4, 0, {    if (cpu->stack.size < 2) {
 
 DEF_CMD(div, 5, 0, {    if (cpu->stack.size < 2) {
                             printf("ERROR in div ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            return 0;
+                            end_flug = true;
+                            break;
                         }
 
                         int b = stack_pop(&(cpu->stack));
@@ -61,7 +65,8 @@ DEF_CMD(div, 5, 0, {    if (cpu->stack.size < 2) {
 
 DEF_CMD(out, 6, 0, {    if (cpu->stack.size < 1) {
                             printf("ERROR in out ip:%d, stack is empty\n", (cpu->ip)-2);
-                            return 0;
+                            end_flug = true;
+                            break;
                         }
 
                         printf("%d\n", stack_pop(&(cpu->stack)));
@@ -69,8 +74,7 @@ DEF_CMD(out, 6, 0, {    if (cpu->stack.size < 1) {
                         break;
                     })
 
-DEF_CMD(hell, 7, 0, {   printf("END PROGRAM\n");
-                        return 0;
+DEF_CMD(hell, 7, 0, {   end_flug = true;
                         break;
                     })
 
@@ -111,8 +115,9 @@ DEF_CMD(call, 10, 1, {  char cmd_param = cpu->program[(cpu->ip)++];
                     })
 
 DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
-                            printf("error ret ip:%d", cpu->ip);
-                            return 0;
+                            printf("error ret ip:%d\n", cpu->ip);
+                            end_flug = true;
+                            break;
                         }
                         cpu->ip = stack_pop(&(cpu->calls));
                         break;
@@ -160,8 +165,9 @@ DEF_CMD(drom, 13, 0, {  /*for (int i = 0; i < 1000000; i++) {
                      })
 
 DEF_CMD(sqrt, 14, 0, {  if (cpu->stack.size < 1) {
-                            printf("stack empty, sqrt, ip:%d", cpu->ip);
-                            return 0;
+                            printf("stack empty, sqrt, ip:%d\n", cpu->ip);
+                            end_flug = true;
+                            break;
                         }
 
                         stack_push(&(cpu->stack), sqrt(stack_pop(&(cpu->stack))));

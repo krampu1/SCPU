@@ -64,6 +64,8 @@ int do_cpu(Cpu *cpu) {
     sf::VertexArray pointmap(sf::Points, MEM_W * PIXEL_SIZE * MEM_H * PIXEL_SIZE);
 
     while(true) {
+        bool end_flug = false;
+
         switch (cpu->program[cpu->ip++]) {
             #define DEF_CMD(CMD, NUM, ARG, CODE) case NUM: {CODE}
 
@@ -78,6 +80,10 @@ int do_cpu(Cpu *cpu) {
             }
         }
 
+        if (end_flug) {
+            break;
+        }
+
         if (window.isOpen()) {
             sf::Event event;
             while (window.pollEvent(event)) {
@@ -87,9 +93,18 @@ int do_cpu(Cpu *cpu) {
         }
     }
 
-    if (window.isOpen()) {
-        window.close();
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+            window.close();
+        }
+        window.clear();
+        window.draw(pointmap);
+        //</debug>
+        window.display();
     }
+    printf("END PROGRAM\n");
     return 0;
 }
 
