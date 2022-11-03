@@ -5,6 +5,7 @@
 #include <math.h>
 #include <SFML/Graphics.hpp>
 #include <limits>
+#include <strings.h>
 
 #define Type_t int
 #include "../stack/stack.h"
@@ -40,8 +41,6 @@ void cpu_des(Cpu *cpu);
 int do_cpu(Cpu *cpu);
 
 void clean_window_buffer(sf::RenderWindow *window);
-
-void m_clear(void *mem, size_t size);
 
 void window_pause(sf::RenderWindow *window, sf::VertexArray *pointmap);
 
@@ -133,12 +132,6 @@ void cpu_des(Cpu *cpu) {
     free(cpu->program);
 }
 
-void m_clear(void *mem, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        *((char *)mem + i) = 0;
-    }
-}
-
 int init_cpu(Cpu *cpu, FILE *program_file) {
     assert(program_file != nullptr);
     assert(cpu != nullptr);
@@ -176,9 +169,9 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
 
     stack_create(&(cpu->calls));
 
-    m_clear((void *)cpu->REG, REG_SIZE * sizeof(int));
+    memset((void *)cpu->REG, REG_SIZE, sizeof(int));
 
-    m_clear((void *)cpu->RAM, MEM_W * MEM_H * sizeof(int));
+    memset((void *)cpu->RAM, MEM_W * MEM_H, sizeof(int));
 
     return 0;
 }
