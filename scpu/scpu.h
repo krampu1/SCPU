@@ -11,5 +11,9 @@ const char INT_MASK = 1;
 
 const char MEM_MASK = 4;
 
+const char SIGN_FIRST  = 'K';
+
+const char SIGN_SECOND = 'C';
+
 
 #endif

@@ -1,77 +1,59 @@
 
 //  название, номер, есть ли аргументы, что делать
 
+#define PUSH(arg) stack_push(&(cpu->stack), arg)
+
+#define POP       stack_pop(&(cpu->stack))
+
+#define PUSH_CALL(arg) stack_push(&(cpu->calls), arg)
+
+#define POP_CALL       stack_pop(&(cpu->calls))
+
+#define check_stack_size_ans_error(num, funck)  if (cpu->stack.size < num) {                                                \
+                                                    printf("ERROR in "#funck" ip:%d, stack size < "#num"\n", (cpu->ip)-2);  \
+                                                    end_flug = true;                                                        \
+                                                    break;                                                                  \
+                                                }
+
 DEF_CMD(push, 1, 1, {   int *arg = get_ptr_arg(cpu);
 
-                        stack_push(&(cpu->stack), *arg);
-
-                        break;
+                        PUSH(*arg);
                     })
 
-DEF_CMD(add, 2, 0, {    if (cpu->stack.size < 2) {
-                            printf("ERROR in add ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(add, 2, 0, {    check_stack_size_ans_error(2, add);
 
-                        stack_push(&(cpu->stack), stack_pop(&(cpu->stack)) + stack_pop(&(cpu->stack)));
-
-                        break;
+                        PUSH(POP + POP);
                     })
 
-DEF_CMD(sup, 3, 0, {    if (cpu->stack.size < 2) {
-                            printf("ERROR in sup ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(sup, 3, 0, {    check_stack_size_ans_error(2, sup);
 
-                        int b = stack_pop(&(cpu->stack));
-                        int a = stack_pop(&(cpu->stack));
+                        int b = POP;
+                        int a = POP;
 
-                        stack_push(&(cpu->stack), a - b);
-
-                        break;
+                        PUSH(a - b);
                     })
 
-DEF_CMD(mul, 4, 0, {    if (cpu->stack.size < 2) {
-                            printf("ERROR in mul ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(mul, 4, 0, {    check_stack_size_ans_error(2, nul);
 
-                        stack_push(&(cpu->stack), stack_pop(&(cpu->stack)) * stack_pop(&(cpu->stack)));
-
-                        break;
+                        PUSH(POP * POP);
                     })
 
-DEF_CMD(div, 5, 0, {    if (cpu->stack.size < 2) {
-                            printf("ERROR in div ip:%d, stack size < 2\n", (cpu->ip)-2);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(div, 5, 0, {    check_stack_size_ans_error(2, div)
 
-                        int b = stack_pop(&(cpu->stack));
-                        int a = stack_pop(&(cpu->stack));
+                        int b = POP;
+                        int a = POP;
 
                         if (b == 0) {
-                            stack_push(&(cpu->stack), std::numeric_limits<int>::max());
+                            PUSH(std::numeric_limits<int>::max());
                         }
                         else {
-                            stack_push(&(cpu->stack), a / b);
+                            PUSH(a / b);
                         }
-
-                        break;
                     })
 
-DEF_CMD(out, 6, 0, {    if (cpu->stack.size < 1) {
-                            printf("ERROR in out ip:%d, stack is empty\n", (cpu->ip)-2);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(out, 6, 0, {    check_stack_size_ans_error(1, out)
 
-                        printf("%d\n", stack_pop(&(cpu->stack)));
-
-                        break;
+                        printf("%d\n", POP);
                     })
 
 DEF_CMD(hell, 7, 0, {   end_flug = true;
@@ -81,37 +63,18 @@ DEF_CMD(hell, 7, 0, {   end_flug = true;
 DEF_CMD(jmp, 8, 1, {    int *arg = get_ptr_arg(cpu);
 
                         cpu->ip = *arg;
-
-                        break;
                     })
 
 DEF_CMD(pop, 9, 1, {    int *arg = get_ptr_arg(cpu);
 
-                        *arg = stack_pop(&(cpu->stack));
-
-                        break;
+                        *arg = POP;
                     })
 
-DEF_CMD(call, 10, 1, {  char cmd_param = cpu->program[(cpu->ip)++];
-                        int inte = 0;
+DEF_CMD(call, 10, 1, {  int *arg = get_ptr_arg(cpu);
 
-                        if (cmd_param & REG_MASK) {
-                            inte  += (unsigned char)cpu->REG[cpu->program[(cpu->ip)++]];
-                        }
-
-                        if (cmd_param & INT_MASK) {
-                            int inte_read = 0;
-                            for (size_t i = 0; i < sizeof(int); i++) {
-                                ((char *)(&inte_read))[i] = cpu->program[(cpu->ip)++];
-                            }
-
-                            inte += inte_read;
-                        }
-
-                        stack_push(&(cpu->calls), cpu->ip);
+                        PUSH_CALL((int)cpu->ip);
                         
-                        cpu->ip = inte;
-                        break;
+                        cpu->ip = *arg;
                     })
 
 DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
@@ -119,8 +82,7 @@ DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
                             end_flug = true;
                             break;
                         }
-                        cpu->ip = stack_pop(&(cpu->calls));
-                        break;
+                        cpu->ip = POP_CALL;
                     })
 
 DEF_CMD(jb, 12, 1, {    int a = 0;
@@ -132,47 +94,27 @@ DEF_CMD(jb, 12, 1, {    int a = 0;
                         if (a < b) {
                             cpu->ip = arg;
                         }
-
-                        break;
                     })
 
-DEF_CMD(drom, 13, 0, {  /*for (int i = 0; i < 1000000; i++) {
-                            if (i%1000==0) {
-                                printf("\n");
-                            }
-                            if (RAM[i]) {
-                                printf("*");
-                            }
-                            else{
-                                printf(".");
-                            }
-                            
-                        }
+#define CALC_W (a % (MEM_W * PIXEL_SIZE))
 
-                        printf("\n");*/
-                        if (window.isOpen()) {
-                            for (register int a = 0; a < 320*4 * 200*4 ; a++) {
-                                pointmap[a].position = sf::Vector2f((a % (320 * 4)), ((a/(320 * 4))%(200 * 4)));
-                                pointmap[a].color = (sf::Color)(cpu->RAM[a % (320 * 4) / 4 + ((a/(320 * 4))%(200 * 4)) / 4 * 320]);
+#define CALC_H (a / (MEM_W * PIXEL_SIZE)) % (MEM_H * PIXEL_SIZE)
+
+DEF_CMD(drom, 13, 0, {  if (window.isOpen()) {
+                            for ( int a = 0; a < 320*4 * 200*4 ; a++) {
+                                pointmap[a].position = sf::Vector2f((float)(CALC_W), (float)(CALC_H));
+                                pointmap[a].color = (sf::Color)(cpu->RAM[CALC_W / PIXEL_SIZE + CALC_H / PIXEL_SIZE * MEM_W]);
                             }
                             window.clear();
                             window.draw(pointmap);
 
                             window.display();
                         }
-
-                        break;
                      })
 
-DEF_CMD(sqrt, 14, 0, {  if (cpu->stack.size < 1) {
-                            printf("stack empty, sqrt, ip:%d\n", cpu->ip);
-                            end_flug = true;
-                            break;
-                        }
+DEF_CMD(sqrt, 14, 0, {  check_stack_size_ans_error(1, sqrt)
 
-                        stack_push(&(cpu->stack), sqrt(stack_pop(&(cpu->stack))));
-
-                        break;
+                        PUSH((int)sqrt(POP));
                      })
 
 DEF_CMD(je, 15, 1, {    int a = 0;
@@ -184,6 +126,4 @@ DEF_CMD(je, 15, 1, {    int a = 0;
                         if (a == b) {
                             cpu->ip = arg;
                         }
-
-                        break;
                     })

@@ -15,7 +15,7 @@ enum Stack_default_values{
     CANARY_CONST       = 0xDED1CA1D,
 };
 
-struct Stack {
+struct Stack{
     unsigned int canary_left;
 
     Type_t       *data;
@@ -23,10 +23,10 @@ struct Stack {
     size_t       capacity;
     size_t       alloc;
 
-    char         *name;
-    size_t       line;
-    char         *file;
-    char         *func;
+    const char         *name;
+    size_t              line;
+    const char         *file;
+    const char         *func;
 
     void         (* data_fprintf)(FILE *, void *);
 
@@ -38,7 +38,7 @@ struct Stack {
 
 static void default_data_fprintf(FILE *file, void *data);
 
-static void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc);
+static void *stack_recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc);
 
 static unsigned int calculate_hash(char *data, size_t data_size);
 
@@ -46,9 +46,15 @@ static bool hash_is_good(Stack *stack);
 
 static bool stack_error(Stack *stack);
 
-static void _stack_create(Stack *stack, char *name, size_t line, char *file, char *func);
+void _stack_create(Stack *stack, const char *name, size_t line, const char *file, const char *func);
 
 static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const size_t line, const char *file, const char *func);
+
+void stack_del(Stack* stack);
+
+Type_t stack_pop(Stack* stack);
+
+size_t stack_push(Stack* stack, Type_t a);
 
 #ifndef NDEBUG
     #define stack_assert(stack) if (stack_error(stack)) stack_dump(stack)
@@ -62,11 +68,11 @@ static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name
                           }
 
 #define memory_alloc_error() {FILE *ptr_log_file = fopen(log_file_path , "a");                                                        \
-                              fprintf(ptr_log_file, "memory allocation error in %s() at %s(%ld)\n", __FUNCTION__, __FILE__, __LINE__);\
+                              fprintf(ptr_log_file, "memory allocation error in %s() at %s(%d)\n", __FUNCTION__, __FILE__, __LINE__);\
                               fclose(ptr_log_file);                                                                                   \
                              }
 
-static void _stack_create(Stack *stack, char *name, size_t line, char *file, char *func) {
+void _stack_create(Stack *stack, const char *name, size_t line, const char *file, const char *func) {
     assert(stack != nullptr);
     assert(name  != nullptr);
     assert(file  != nullptr);
@@ -77,9 +83,9 @@ static void _stack_create(Stack *stack, char *name, size_t line, char *file, cha
 
     stack->alloc        = 0;
 #ifdef CANARY_PROT
-    stack->data         = (Type_t *)recalloc((void *)sizeof(CANARY_CONST), DEFAULT_STACK_SIZE, sizeof(Type_t), &(stack->alloc));
+    stack->data         = (Type_t *)stack_recalloc((void *)sizeof(CANARY_CONST), DEFAULT_STACK_SIZE, sizeof(Type_t), &(stack->alloc));
 #else
-    stack->data         = (Type_t *)recalloc(nullptr, DEFAULT_STACK_SIZE, sizeof(Type_t), &(stack->alloc));
+    stack->data         = (Type_t *)stack_recalloc(nullptr, DEFAULT_STACK_SIZE, sizeof(Type_t), &(stack->alloc));
 #endif
     stack->size         = 0;
     stack->capacity     = DEFAULT_STACK_SIZE;
@@ -89,7 +95,7 @@ static void _stack_create(Stack *stack, char *name, size_t line, char *file, cha
     stack->file         = file;
     stack->func         = func;
 
-    stack->data_fprintf = (void (*)(FILE *, void *))default_data_fprintf;
+    stack->data_fprintf = default_data_fprintf;
     
     stack->hash         = 0;
     stack->data_hash    = 0;
@@ -102,7 +108,7 @@ static void _stack_create(Stack *stack, char *name, size_t line, char *file, cha
 }
 
 #define stack_create(stack) \
-        _stack_create(stack, (char *)#stack, (size_t)__LINE__, (char *)__FILE__, (char *)__FUNCTION__)
+        _stack_create(stack, #stack, (size_t)__LINE__, __FILE__, __FUNCTION__)
                             
 
 static bool stack_error(Stack *stack) {
@@ -133,39 +139,39 @@ static bool stack_error(Stack *stack) {
 }
 
 static void default_data_fprintf(FILE *file, void *data) {
-    fprintf(file, "%d", data);
+    fprintf(file, "%p", data); // printf pointer
 }
 
 static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const size_t line, const char *file, const char *func) {
     assert(ptr_log_file != nullptr);
 
-    fprintf(ptr_log_file, "error in %s() at %s(%ld):\n", func, file, line);
+    fprintf(ptr_log_file, "error in %s() at %s(%zu):\n", func, file, line);
 
     fprintf(ptr_log_file, "  Stack(%p) \"%s\"\n", stack, name);
 
     fprintf(ptr_log_file, "  \"%s\" at %s() at %s\n", stack->name, stack->func, stack->file);
     
-    fprintf(ptr_log_file, "  {\n    size = %ld\n", stack->size);
-    fprintf(ptr_log_file, "    capacity = %ld\n",  stack->capacity);
-    fprintf(ptr_log_file, "    hash = %ld\n",  stack->hash);
-    fprintf(ptr_log_file, "    data hash = %ld\n",  stack->data_hash);
+    fprintf(ptr_log_file, "  {\n    size = %zu\n", stack->size);
+    fprintf(ptr_log_file, "    capacity = %zu\n",  stack->capacity);
+    fprintf(ptr_log_file, "    hash = %o\n",  stack->hash);
+    fprintf(ptr_log_file, "    data hash = %o\n",  stack->data_hash);
     fprintf(ptr_log_file, "    data[%p]\n",        stack->data);
 
     if (stack->data != nullptr) {
         for (size_t i = 0; i < stack->capacity; i++) {
             if (i < stack->size) {
-                fprintf(ptr_log_file, "    *[%ld]=", i);
+                fprintf(ptr_log_file, "    *[%zu]=", i);
                 stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                 fprintf(ptr_log_file, "\n");
             }
             else {
                 if (*((char *)(stack->data + i)) == (char)POISON_CHAR) {
-                    fprintf(ptr_log_file, "     [%ld]=", i);
+                    fprintf(ptr_log_file, "     [%zu]=", i);
                     stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                     fprintf(ptr_log_file, "(poison)\n");
                 }
                 else {
-                    fprintf(ptr_log_file, "     [%ld]=", i);
+                    fprintf(ptr_log_file, "     [%zu]=", i);
                     stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                     fprintf(ptr_log_file, "\n");
                 }
@@ -194,7 +200,7 @@ static unsigned int calculate_hash(char *data, size_t data_size) {
     return hash;
 }
 
-static void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
+static void *stack_recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
     assert(alloc != nullptr);
 
 #ifdef CANARY_PROT
@@ -209,7 +215,7 @@ static void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *al
     data = (void *)realloc((void *)data, data_size * elem_size);
 #endif
 
-    for (int i = *alloc; i < data_size * elem_size; i++) {
+    for (size_t i = *alloc; i < data_size * elem_size; i++) {
         *((char *)data + i) = (char)POISON_CHAR;
     }
 
@@ -240,6 +246,10 @@ static bool hash_is_good(Stack *stack) {
     if (hash == stack->hash && data_hash == stack->data_hash) {
         return true;
     }
+
+    stack->hash      = hash;
+    stack->data_hash = data_hash;
+    
     return false;
 }
 
@@ -257,7 +267,7 @@ static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, vo
     stack_assert(stack);
 }
 
-static size_t stack_resize(Stack *stack) {
+static size_t stack_resize_ifneed(Stack *stack) {
     stack_assert(stack);
 
     size_t new_stack_capacity = stack->capacity;
@@ -270,7 +280,7 @@ static size_t stack_resize(Stack *stack) {
         new_stack_capacity = DEFAULT_STACK_SIZE;
     }
 
-    stack->data = (Type_t *)recalloc(stack->data, new_stack_capacity,sizeof(Type_t), &(stack->alloc));
+    stack->data = (Type_t *)stack_recalloc(stack->data, new_stack_capacity,sizeof(Type_t), &(stack->alloc));
 
     if (stack->data == nullptr) {
         memory_alloc_error();
@@ -291,7 +301,7 @@ static size_t stack_resize(Stack *stack) {
 size_t stack_push(Stack* stack, Type_t a) {
     stack_assert(stack);
 
-    if (stack_resize(stack) == 0) {
+    if (stack_resize_ifneed(stack) == 0) {
         return 0;
     }
     
@@ -323,7 +333,7 @@ Type_t stack_pop(Stack* stack) {
     recalculate_stack_hash(stack);
 #endif
 
-    stack_resize(stack);
+    stack_resize_ifneed(stack);
 
     stack_assert(stack);
 
@@ -333,7 +343,7 @@ Type_t stack_pop(Stack* stack) {
 void stack_del(Stack* stack) {
     stack_assert(stack);
 
-    recalloc(stack->data, 0, sizeof(Type_t), &(stack->alloc));
+    stack_recalloc(stack->data, 0, sizeof(Type_t), &(stack->alloc));
 
     stack->data = (Type_t *)STACK_DEL_PTR;
 

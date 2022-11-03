@@ -17,13 +17,15 @@ const int PIXEL_SIZE = 4;
 
 const int FPS = 10;
 
+const size_t REG_SIZE = 5;
+
 struct Cpu {
     size_t program_size;
     char *program;
     size_t ip;
     Stack stack;
     Stack calls;
-    int REG[5];
+    int REG[REG_SIZE];
     int RAM[MEM_H * MEM_W];
 };
 
@@ -36,6 +38,15 @@ int init_cpu(Cpu *cpu, FILE* program_file);
 void cpu_des(Cpu *cpu);
 
 int do_cpu(Cpu *cpu);
+
+void clean_window_buffer(sf::RenderWindow *window);
+
+void m_clear(void *mem, size_t size);
+
+void window_pause(sf::RenderWindow *window, sf::VertexArray *pointmap);
+
+
+
 
 int main(int argc, const char *argv[]) {
     const char *file_in_path = nullptr;
@@ -58,6 +69,33 @@ int main(int argc, const char *argv[]) {
     cpu_des(&cpu);
 }
 
+
+
+
+
+void clean_window_buffer(sf::RenderWindow *window) {
+    if ((*window).isOpen()) {
+        sf::Event event;
+        while ((*window).pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+            (*window).close();
+        }
+    }
+}
+
+void window_pause(sf::RenderWindow *window, sf::VertexArray *pointmap) {
+    while ((*window).isOpen()) {
+        sf::Event event;
+        while ((*window).pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+            (*window).close();
+        }
+        (*window).clear();
+        (*window).draw(*pointmap);
+        (*window).display();
+    }
+}
+
 int do_cpu(Cpu *cpu) {
     sf::RenderWindow window(sf::VideoMode(MEM_W * PIXEL_SIZE, MEM_H * PIXEL_SIZE), "Test Window");
     window.setFramerateLimit(10);
@@ -65,9 +103,9 @@ int do_cpu(Cpu *cpu) {
 
     while(true) {
         bool end_flug = false;
-
+        
         switch (cpu->program[cpu->ip++]) {
-            #define DEF_CMD(CMD, NUM, ARG, CODE) case NUM: {CODE}
+            #define DEF_CMD(CMD, NUM, ARG, CODE) case NUM: {CODE break;}
 
             #include "../commands/commands.h"
 
@@ -84,27 +122,10 @@ int do_cpu(Cpu *cpu) {
             break;
         }
 
-        if (window.isOpen()) {
-            sf::Event event;
-            while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed)
-                window.close();
-            }
-        }
+        clean_window_buffer(&window);
     }
 
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-            window.close();
-        }
-        window.clear();
-        window.draw(pointmap);
-        //</debug>
-        window.display();
-    }
-    printf("END PROGRAM\n");
+    window_pause(&window, &pointmap);
     return 0;
 }
 
@@ -112,15 +133,22 @@ void cpu_des(Cpu *cpu) {
     free(cpu->program);
 }
 
+void m_clear(void *mem, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        *((char *)mem + i) = 0;
+    }
+}
+
 int init_cpu(Cpu *cpu, FILE *program_file) {
     assert(program_file != nullptr);
+    assert(cpu != nullptr);
 
     char *file_type = (char *)calloc(2, sizeof(char));
     assert(file_type != nullptr);
 
     fread(file_type, sizeof(char), 2, program_file);
 
-    if (file_type[0] != 'K' || file_type[1] != 'C') {
+    if (file_type[0] != SIGN_FIRST || file_type[1] != SIGN_SECOND) {
         printf("NOT COMPILE TYPE FILE");
         return 1;
     }
@@ -133,7 +161,7 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
         return 1;
     }
 
-    fread((char *)(&(cpu->program_size)), 4, 1, program_file);
+    fread((char *)(&(cpu->program_size)), 1, sizeof(size_t), program_file);
 
     fseek(program_file, 0, SEEK_SET);
 
@@ -148,13 +176,9 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
 
     stack_create(&(cpu->calls));
 
-    for (int i = 0; i < 5 ; i++) {
-        cpu->REG[i] = 0;
-    }
+    m_clear((void *)cpu->REG, REG_SIZE * sizeof(int));
 
-    for (size_t i = 0; i < MEM_W * MEM_H ; i++) {
-        cpu->RAM[i] = 0;
-    }
+    m_clear((void *)cpu->RAM, MEM_W * MEM_H * sizeof(int));
 
     return 0;
 }
@@ -171,7 +195,7 @@ void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu) {
             assert(reg < 1 || reg > 4);
         }
 
-        *arg = cpu->REG[reg];
+        *arg = cpu->REG[(size_t)((unsigned char)reg)];
     }
 
     if (cmd_param & INT_MASK) {
@@ -202,7 +226,7 @@ int * get_ptr_arg(Cpu *cpu) {
     char cmd_param = cpu->program[(cpu->ip)++];
 
     if (cmd_param & REG_MASK) {
-        ret = &cpu->REG[cpu->program[(cpu->ip)++]];
+        ret = &cpu->REG[(size_t)((unsigned char)(cpu->program[(cpu->ip)++]))];
         inte = *ret;
     }
 
