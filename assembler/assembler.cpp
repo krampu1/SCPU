@@ -122,7 +122,7 @@ bool get_arg(char *txt_ptr, char *param, char *reg, int *integer, goto_flug *got
             *inte = true;
         }
     }
-    else{
+    else {
         if (!sscanf(param, "%d", integer)){
             printf("error while reading param(int): %s", param);
         }
