@@ -1,5 +1,7 @@
 //#define GRAPHICS
 
+//#pragma GCC diagnostic ignored "-Weffc++"
+
 #include <stdio.h>
 #include "../io/io.h"
 #include <assert.h>
@@ -11,16 +13,6 @@
 
 #define Type_t int
 #include "../stack/stack.h"
-
-const size_t MEM_H = 200;
-
-const size_t MEM_W = 320;
-
-const size_t PIXEL_SIZE = 4;
-
-const unsigned int FPS = 10;
-
-const size_t REG_SIZE = 5;
 
 struct Cpu {
     size_t program_size;

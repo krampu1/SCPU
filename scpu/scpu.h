@@ -18,5 +18,15 @@ const char SIGN_FIRST  = 'K';
 
 const char SIGN_SECOND = 'C';
 
+const size_t MEM_H = 200;
+
+const size_t MEM_W = 320;
+
+const size_t PIXEL_SIZE = 4;
+
+const unsigned int FPS = 10;
+
+const size_t REG_SIZE = 5;
+
 
 #endif
