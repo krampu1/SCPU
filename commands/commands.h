@@ -80,8 +80,9 @@ DEF_CMD(jb, 12, 1, {    int a = 0;
                             cpu->ip = arg;
                         }
                     })
+                    
 #ifdef GRAPHICS
-DEF_CMD(drom, 13, 0, {  draw_window(&window, cpu, &pointmap);
+DEF_CMD(drom, 13, 0, { draw_window(&window, cpu, &pointmap);
                      })
 #endif
 

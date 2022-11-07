@@ -117,6 +117,7 @@ void draw_window(sf::RenderWindow *window, Cpu *cpu, sf::VertexArray *pointmap) 
 
         window->display();
     }
+    
 }
 #endif
 

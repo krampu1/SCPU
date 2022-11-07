@@ -1,3 +1,5 @@
+#define GRAPHICS
+
 #include "../io/io.h"
 #include "../string/string.h"
 #include <stdlib.h>
