@@ -1,4 +1,4 @@
-//#define GRAPHICS
+#define GRAPHICS
 
 //#pragma GCC diagnostic ignored "-Weffc++"
 
@@ -37,6 +37,8 @@ int do_cpu(Cpu *cpu);
 void clean_window_buffer(sf::RenderWindow *window);
 
 void window_pause(sf::RenderWindow *window, sf::VertexArray *pointmap);
+
+void draw_window(sf::RenderWindow *window, Cpu *cpu, sf::VertexArray *pointmap);
 
 int pop(Cpu *cpu);
 
@@ -106,7 +108,7 @@ void draw_window(sf::RenderWindow *window, Cpu *cpu, sf::VertexArray *pointmap) 
     assert(pointmap != nullptr);
 
     if (window->isOpen()) {
-        for ( int a = 0; a < MEM_W * PIXEL_SIZE * MEM_H * PIXEL_SIZE; a++) {
+        for (size_t a = 0; a < MEM_W * PIXEL_SIZE * MEM_H * PIXEL_SIZE; a++) {
             (*pointmap)[a].position = sf::Vector2f((float)(CALC_W), (float)(CALC_H));
             (*pointmap)[a].color = (sf::Color)(cpu->RAM[CALC_W / PIXEL_SIZE + CALC_H / PIXEL_SIZE * MEM_W]);
         }
