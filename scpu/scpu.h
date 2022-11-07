@@ -5,6 +5,9 @@
 
 #define BEGIN_PROGRAM_PTR 11
 
+const size_t COMMAND_AND_MASK_SIZE = 2;
+const size_t COMMAND_SIZE          = 1;
+
 const char REG_MASK = 2;
 
 const char INT_MASK = 1;

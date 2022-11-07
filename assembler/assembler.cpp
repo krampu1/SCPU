@@ -26,15 +26,15 @@ struct goto_flug{
 
 #define SET_CHAR(data) *cmd = data; cmd++; (*size)++;
 
-void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size);
+void get_param(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size);
 
 size_t text_to_program(char **program, KR_string *text, size_t text_size);
 
 void write_commands_to_file(const char *file_out_path, char *program, size_t commands_size);
 
-char make_mask(bool reg, bool mem, bool inte);
+char make_mask(bool reg, bool mem, bool operand);
 
-bool get_arg(char *txt_ptr, char *param, char *reg, int *integer, goto_flug *goto_flugs, goto_flug *jmp, bool *inte);
+bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *goto_flugs, goto_flug *jmp, bool *operand_ext);
 
 size_t rid_char(char *begin, char *end, char ch);
 
@@ -49,6 +49,8 @@ void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **en
 void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_flugs, size_t text_size, KR_string *text);
 
 bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char *txt_end);
+
+bool eq_command(const char *str, const char *cmd, size_t cmd_size);
 
 
 
@@ -80,7 +82,8 @@ int main(int argc, const char *argv[]) {
 
 
 size_t text_to_program(char **program, KR_string *text, size_t text_size) {
-    assert(text != nullptr);
+    assert(text    != nullptr);
+    assert(program != nullptr);
 
     goto_flug goto_flugs[MAX_FLUG_NUMBER] = {0};
 
@@ -102,7 +105,18 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
     return program_size;
 }
 
-bool get_arg(char *txt_ptr, char *param, char *reg, int *integer, goto_flug *goto_flugs, goto_flug *jmp, bool *inte) {
+bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *goto_flugs, goto_flug *jmp, bool *operand_ext) {
+    assert(txt_ptr     != nullptr);
+
+    assert(param       != nullptr);
+    assert(reg         != nullptr);
+    assert(operand     != nullptr);
+
+    assert(goto_flugs  != nullptr);
+    assert(jmp         != nullptr);
+
+    assert(operand_ext != nullptr);
+
     size_t n_s = 0;
     
     if (sscanf(txt_ptr, "%s%n", param, (int *)&n_s) <= 0) {return 1;}
@@ -113,28 +127,35 @@ bool get_arg(char *txt_ptr, char *param, char *reg, int *integer, goto_flug *got
         *reg = reg_to_num(param);
 
         if (!(*reg)) {
-            *integer = -1;
+            *operand = -1;
             for (goto_flug *it = goto_flugs; it < jmp; it++) {
                 if (KR_strcmp(param, it->name) == 0) {
-                    *integer = (int)it->ptr;
+                    *operand = (int)it->ptr;
                 }
             }
-            *inte = true;
+            *operand_ext = true;
         }
     }
     else {
-        if (!sscanf(param, "%d", integer)){
-            printf("error while reading param(int): %s", param);
+        if (!sscanf(param, "%d", operand)){
+            fprintf(stderr, "error while reading param(int): %s", param);
         }
         else {
-            *inte = true;
+            *operand_ext = true;
         }
     }
 
     return 0;
 }
 
-void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size) {
+void get_param(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size) {
+    assert(cmd        != nullptr);
+
+    assert(goto_flugs != nullptr);
+    assert(jmp        != nullptr);
+
+    assert(size       != nullptr);
+    
     char txt[MAX_COMMAND_SIZE] = {0};
     
     char *txt_ptr = txt;
@@ -156,32 +177,33 @@ void get_args(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, 
     rid_char(txt_ptr, txt_end, '+');
 
     char reg  = 0;
-    bool inte = false;
+    bool operand_ext = false;
 
-    int integer = 0;
+    int operand = 0;
 
     for (int i = 0; i < 2; i++){
-        if (get_arg(txt_ptr, param, &reg, &integer, goto_flugs, jmp, &inte)) {
+        if (get_arg(txt_ptr, param, &reg, &operand, goto_flugs, jmp, &operand_ext)) {
             break;
         }
     }
 
-    char mask = make_mask(reg, mem, inte);
+    char mask = make_mask(reg, mem, operand_ext);
     
     SET_CHAR(mask);
 
     if (reg) {
         SET_CHAR(reg);
     }
-    if (inte) {
-        *((int *)cmd) = integer;
+    if (operand_ext) {
+        *((int *)cmd) = operand;
         cmd += sizeof(int);
         (*size) += sizeof(int);
     }
 }
 
 void write_commands_to_file(const char *file_out_path, char *program, size_t commands_size) {
-    assert(program != nullptr);
+    assert(file_out_path != nullptr);
+    assert(program       != nullptr);
 
     FILE *ptr_file_out = fopen(file_out_path, "wb");
     assert(ptr_file_out != nullptr);
@@ -191,7 +213,7 @@ void write_commands_to_file(const char *file_out_path, char *program, size_t com
     fclose(ptr_file_out);
 }
 
-char make_mask(bool reg, bool mem, bool inte) {
+char make_mask(bool reg, bool mem, bool operand_ext) {
     char mask = 0;
 
     if (reg) {
@@ -200,7 +222,7 @@ char make_mask(bool reg, bool mem, bool inte) {
     if (mem) {
         mask |= MEM_MASK;
     }
-    if (inte) {
+    if (operand_ext) {
         mask |= INT_MASK;
     }
 
@@ -237,6 +259,7 @@ void write_flugs(goto_flug *flug_ptr, size_t program_ptr, char *str_begin, char 
 
 char reg_to_num(char *str) {
     assert(str != nullptr);
+
     if      (strncmp("rax", str, 4) == 0) {return 1;}
     else if (strncmp("rbx", str, 4) == 0) {return 2;}
     else if (strncmp("rcx", str, 4) == 0) {return 3;}
@@ -257,6 +280,11 @@ void write_additional_data(char **program_ptr, size_t program_size) {
 }
 
 bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char *txt_end) {
+    assert(program_size != nullptr);
+    assert(end_flugs    != nullptr);
+    assert(txt_begin    != nullptr);
+    assert(txt_end      != nullptr);
+
     for (char *cmd_ptr = txt_begin; cmd_ptr <= txt_end; cmd_ptr++) {
         if (*cmd_ptr == ':') {
             write_flugs(*end_flugs, *program_size, txt_begin, cmd_ptr);
@@ -270,6 +298,11 @@ bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char
 }
 
 void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **end_flugs, size_t text_size, KR_string *text) {
+    assert(program_size != nullptr);
+    assert(goto_flugs   != nullptr);
+    assert(end_flugs    != nullptr);
+    assert(text         != nullptr);
+
     char cmd[MAX_COMMAND_SIZE] = {0};
 
     for (size_t i = 0; i < text_size; i++) {
@@ -279,11 +312,11 @@ void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **en
 
         size_t cmd_size = 0;
 
-        #define DEF_CMD(CMD, NUM, ARG, CODE) if (strncmp(text[i].ptr, #CMD, sizeof(#CMD) - 1)==0) {          \
-                                                *cmd = NUM;cmd_size++;                                       \
-                                                if(ARG){                                                     \
-                                                get_args(text[i], cmd + 1, goto_flugs, *end_flugs, &cmd_size);\
-                                                }                                                            \
+        #define DEF_CMD(CMD, NUM, ARG, CODE) if (eq_command(text[i].ptr, #CMD, sizeof(#CMD))) {            \
+                                                *cmd = NUM;cmd_size++;                                         \
+                                                if(ARG){                                                       \
+                                                get_param(text[i], cmd + 1, goto_flugs, *end_flugs, &cmd_size);\
+                                                }                                                              \
                                             }
 
         #include "../commands/commands.h"
@@ -295,6 +328,11 @@ void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **en
 }
 
 void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_flugs, size_t text_size, KR_string *text) {
+    assert(program_ptr != nullptr);
+    assert(goto_flugs  != nullptr);
+    assert(end_flugs   != nullptr);
+    assert(text        != nullptr);
+
     for (size_t i = 0; i < text_size; i++) {
         if (KR_strchr(text[i].ptr, ':')) {
             continue;
@@ -302,11 +340,11 @@ void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_
 
         size_t cmd_size = 0;
 
-        #define DEF_CMD(CMD, NUM, ARG, CODE)    if (strncmp(text[i].ptr, #CMD, sizeof(#CMD) - 1)==0) {                       \
+        #define DEF_CMD(CMD, NUM, ARG, CODE)    if (eq_command(text[i].ptr, #CMD, sizeof(#CMD))) {                       \
                                                     **program_ptr = NUM;                                                      \
                                                     cmd_size++;                                                              \
                                                     if (ARG) {                                                               \
-                                                        get_args(text[i], (*program_ptr) + 1, goto_flugs, end_flugs, &cmd_size);\
+                                                        get_param(text[i], (*program_ptr) + 1, goto_flugs, end_flugs, &cmd_size);\
                                                         }                                                                    \
                                                     }
 
@@ -316,4 +354,15 @@ void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_
 
         *program_ptr += cmd_size;
     }
+}
+
+bool eq_command(const char *str, const char *cmd, size_t cmd_size) {
+    assert(str != nullptr);
+    assert(cmd != nullptr);
+
+    char read_cmd[MAX_COMMAND_SIZE] = {0};
+
+    sscanf(str, "%s", read_cmd);
+
+    return (strncmp(read_cmd, cmd, cmd_size) == 0);
 }

@@ -52,9 +52,11 @@ static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name
 
 void stack_del(Stack* stack);
 
-Type_t stack_pop(Stack* stack);
+[[maybe_unused]] static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *));
 
-size_t stack_push(Stack* stack, Type_t a);
+[[maybe_unused]] Type_t stack_pop(Stack* stack);
+
+[[maybe_unused]] size_t stack_push(Stack* stack, Type_t a);
 
 #ifndef NDEBUG
     #define stack_assert(stack) if (stack_error(stack)) stack_dump(stack)
@@ -253,7 +255,7 @@ static bool hash_is_good(Stack *stack) {
     return false;
 }
 
-static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
+[[maybe_unused]] static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
     assert(data_fprintf != nullptr);
 
     stack_assert(stack);
@@ -298,7 +300,7 @@ static size_t stack_resize_ifneed(Stack *stack) {
     return stack->capacity;
 }
 
-size_t stack_push(Stack* stack, Type_t a) {
+[[maybe_unused]] size_t stack_push(Stack* stack, Type_t a) {
     stack_assert(stack);
 
     if (stack_resize_ifneed(stack) == 0) {
@@ -316,7 +318,7 @@ size_t stack_push(Stack* stack, Type_t a) {
     return stack->size;
 }
 
-Type_t stack_pop(Stack* stack) {
+[[maybe_unused]] Type_t stack_pop(Stack* stack) {
     stack_assert(stack);
 
     if (stack->size == 0) {
