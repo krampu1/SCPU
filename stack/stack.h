@@ -40,9 +40,11 @@ static void default_data_fprintf(FILE *file, void *data);
 
 static void *stack_recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc);
 
+#ifdef HASH_PROT
 static unsigned int calculate_hash(char *data, size_t data_size);
 
 static bool hash_is_good(Stack *stack);
+#endif
 
 static bool stack_error(Stack *stack);
 
@@ -147,14 +149,14 @@ static void default_data_fprintf(FILE *file, void *data) {
 static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const size_t line, const char *file, const char *func) {
     assert(ptr_log_file != nullptr);
 
-    fprintf(ptr_log_file, "error in %s() at %s(%zu):\n", func, file, line);
+    fprintf(ptr_log_file, "error in %s() at %s(%Iu):\n", func, file, line);
 
     fprintf(ptr_log_file, "  Stack(%p) \"%s\"\n", stack, name);
 
     fprintf(ptr_log_file, "  \"%s\" at %s() at %s\n", stack->name, stack->func, stack->file);
     
-    fprintf(ptr_log_file, "  {\n    size = %zu\n", stack->size);
-    fprintf(ptr_log_file, "    capacity = %zu\n",  stack->capacity);
+    fprintf(ptr_log_file, "  {\n    size = %Iu\n", stack->size);
+    fprintf(ptr_log_file, "    capacity = %Iu\n",  stack->capacity);
     fprintf(ptr_log_file, "    hash = %o\n",  stack->hash);
     fprintf(ptr_log_file, "    data hash = %o\n",  stack->data_hash);
     fprintf(ptr_log_file, "    data[%p]\n",        stack->data);
@@ -162,18 +164,18 @@ static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name
     if (stack->data != nullptr) {
         for (size_t i = 0; i < stack->capacity; i++) {
             if (i < stack->size) {
-                fprintf(ptr_log_file, "    *[%zu]=", i);
+                fprintf(ptr_log_file, "    *[%Iu]=", i);
                 stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                 fprintf(ptr_log_file, "\n");
             }
             else {
                 if (*((char *)(stack->data + i)) == (char)POISON_CHAR) {
-                    fprintf(ptr_log_file, "     [%zu]=", i);
+                    fprintf(ptr_log_file, "     [%Iu]=", i);
                     stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                     fprintf(ptr_log_file, "(poison)\n");
                 }
                 else {
-                    fprintf(ptr_log_file, "     [%zu]=", i);
+                    fprintf(ptr_log_file, "     [%Iu]=", i);
                     stack->data_fprintf(ptr_log_file, (void *) (stack->data + i));
                     fprintf(ptr_log_file, "\n");
                 }
@@ -185,6 +187,7 @@ static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name
     fclose(ptr_log_file);
 }
 
+#ifdef HASH_PROT
 static unsigned int calculate_hash(char *data, size_t data_size) {
     assert(data != nullptr);
 
@@ -201,6 +204,7 @@ static unsigned int calculate_hash(char *data, size_t data_size) {
 
     return hash;
 }
+#endif
 
 static void *stack_recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
     assert(alloc != nullptr);
@@ -226,6 +230,7 @@ static void *stack_recalloc(void *data, size_t data_size, size_t elem_size, size
     return data;
 }
 
+#ifdef HASH_PROT
 static void recalculate_stack_hash(Stack *stack) {
     assert(stack != nullptr);
 
@@ -254,6 +259,7 @@ static bool hash_is_good(Stack *stack) {
     
     return false;
 }
+#endif
 
 [[maybe_unused]] static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
     assert(data_fprintf != nullptr);

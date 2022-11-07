@@ -63,7 +63,7 @@ DEF_CMD(call, 10, 1, {  int *arg = get_ptr_arg(cpu);
                     })
 
 DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
-                            fprintf(stderr, "error ret ip:%zu\n", cpu->ip);
+                            fprintf(stderr, "error ret ip:%Iu\n", cpu->ip);
                             end_flug = true;
                             break;
                         }

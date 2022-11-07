@@ -144,7 +144,7 @@ int do_cpu(Cpu *cpu) {
             #undef DEF_CMD
 
             default: {
-                fprintf(stderr, "command_not_found ip:%zu\n", cpu->ip - COMMAND_SIZE);
+                fprintf(stderr, "command_not_found ip:%Iu\n", cpu->ip - COMMAND_SIZE);
                 return 1;
                 break;
             }
@@ -235,7 +235,7 @@ void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu) {
     if (cmd_param & REG_MASK) {
         reg = cpu->program[(cpu->ip)++];
         if (reg < 1 || reg > 4) {
-            fprintf(stderr, "error in reg number, number reg is %u in ip:%zu", (unsigned int)reg, cpu->ip - COMMAND_AND_MASK_SIZE);
+            fprintf(stderr, "error in reg number, number reg is %u in ip:%Iu", (unsigned int)reg, cpu->ip - COMMAND_AND_MASK_SIZE);
             assert(reg < 1 || reg > 4);
         }
 
@@ -299,7 +299,7 @@ int pop(Cpu *cpu) {
     assert(cpu      != nullptr);
 
     if ((cpu->stack).size == 0) {
-        fprintf(stderr, "pop error:stack size == 0, in ip %zu\n", cpu->ip - COMMAND_SIZE);
+        fprintf(stderr, "pop error:stack size == 0, in ip %Iu\n", cpu->ip - COMMAND_SIZE);
     }
     else {
         return stack_pop(&(cpu->stack));
