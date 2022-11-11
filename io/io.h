@@ -11,9 +11,9 @@ size_t buff_to_text(char ***text, char *buff, size_t buff_size);
 
 size_t buff_to_text(KR_string **text, char *buff, size_t buff_size);
 
-void get_infile_name_from_flug(const char **file_path, int argc, const char *argv[]);
+void get_infile_name_from_flag(const char **file_path, int argc, const char *argv[]);
 
-void get_outfile_name_from_flug(const char **file_path, int argc, const char *argv[]);
+void get_outfile_name_from_flag(const char **file_path, int argc, const char *argv[]);
 
 void fprintf_buff(FILE *ptrfileout, char *buff, size_t buff_size);
 

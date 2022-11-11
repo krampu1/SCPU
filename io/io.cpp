@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include "../string/string.h"
 #include "io.h"
+#include <string.h>
 
 size_t get_file_size(FILE * ptr_file) {
     assert(ptr_file != nullptr);
@@ -91,7 +92,7 @@ size_t buff_to_text(KR_string **text, char *buff, size_t buff_size) {
     return text_size;
 }
 
-void get_outfile_name_from_flug(const char **file_path, int argc, const char *argv[]) {
+void get_outfile_name_from_flag(const char **file_path, int argc, const char *argv[]) {
     //åñëè åñòü íàçâàíèå ôàéëà ââîäà òî ôëàã -f òî÷íî íå ïîñëåäíèé, çíà÷èò ïåðåáèðàòü argc - 1 áåçñìûñëåííî
     //à òàê æå ýòî ïîìîæåò èçáåæàòü îøèáêè åñëè ôëàã óêàçàëè ïîñëåäíèì
     for (int i = 0; i < argc - 1; i++) {
@@ -102,7 +103,7 @@ void get_outfile_name_from_flug(const char **file_path, int argc, const char *ar
     }
 }
 
-void get_infile_name_from_flug(const char **file_path, int argc, const char *argv[]) {
+void get_infile_name_from_flag(const char **file_path, int argc, const char *argv[]) {
     //åñëè åñòü íàçâàíèå ôàéëà ââîäà òî ôëàã -f òî÷íî íå ïîñëåäíèé, çíà÷èò ïåðåáèðàòü argc - 1 áåçñìûñëåííî
     //à òàê æå ýòî ïîìîæåò èçáåæàòü îøèáêè åñëè ôëàã óêàçàëè ïîñëåäíèì
     for (int i = 0; i < argc - 1; i++) {

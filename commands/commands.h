@@ -41,7 +41,7 @@ DEF_CMD(div, 5, 0, {    int b = POP;
 DEF_CMD(out, 6, 0, {    printf("%d\n", POP);
                     })
 
-DEF_CMD(hell, 7, 0, {   end_flug = true;
+DEF_CMD(hell, 7, 0, {   end_flag = true;
                         break;
                     })
 
@@ -64,7 +64,7 @@ DEF_CMD(call, 10, 1, {  int *arg = get_ptr_arg(cpu);
 
 DEF_CMD(ret, 11, 0, {   if (cpu->calls.size == 0) {
                             fprintf(stderr, "error ret ip:%Iu\n", cpu->ip);
-                            end_flug = true;
+                            end_flag = true;
                             break;
                         }
                         cpu->ip = POP_CALL;

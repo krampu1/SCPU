@@ -17,18 +17,20 @@ const size_t SIZE_PROGRAM_SIZE_CONST = 8;
 
 const size_t MAX_COMMAND_SIZE        = 30;
 
-const size_t MAX_FLUG_NUMBER         = 100;
+const size_t MAX_flag_NUMBER         = 100;
 
 const char  *DEFAULT_OUT_FILE        = "a.ksc";
 
-struct goto_flug{
+struct goto_flag{
     KR_string name;
     size_t ptr;
 };
 
 #define SET_CHAR(data) *cmd = data; cmd++; (*size)++;
 
-void get_param(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size);
+#define FREE_BUFF free(text[0].ptr);
+
+void get_param(KR_string text, char *cmd, goto_flag *goto_flags, goto_flag *jmp, size_t *size);
 
 size_t text_to_program(char **program, KR_string *text, size_t text_size);
 
@@ -36,21 +38,21 @@ void write_commands_to_file(const char *file_out_path, char *program, size_t com
 
 char make_mask(bool reg, bool mem, bool operand);
 
-bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *goto_flugs, goto_flug *jmp, bool *operand_ext);
+bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flag *goto_flags, goto_flag *jmp, bool *operand_ext);
 
 size_t rid_char(char *begin, char *end, char ch);
 
-void write_flugs(goto_flug *flug_ptr, size_t program_ptr, char *str_begin, char *str_end);
+void write_flags(goto_flag *flag_ptr, size_t program_ptr, char *str_begin, char *str_end);
 
 char reg_to_num(char *str);
 
 void write_additional_data(char **program_ptr, size_t program_size);
 
-void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **end_flugs, size_t text_size, KR_string *text);
+void first_iteration(size_t *program_size, goto_flag *goto_flags, goto_flag **end_flags, size_t text_size, KR_string *text);
 
-void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_flugs, size_t text_size, KR_string *text);
+void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_flags, size_t text_size, KR_string *text);
 
-bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char *txt_end);
+bool get_flag(size_t *program_size, goto_flag **end_flags, char *txt_begin, char *txt_end);
 
 bool eq_command(const char *str, const char *cmd, size_t cmd_size);
 
@@ -61,7 +63,7 @@ int main(int argc, const char *argv[]) {
     KR_string *text = nullptr;
 
     const char *file_in_path = nullptr;
-    get_infile_name_from_flug(&file_in_path, argc, argv);
+    get_infile_name_from_flag(&file_in_path, argc, argv);
     assert(file_in_path != nullptr);
 
     size_t text_size = get_text_file(&text, file_in_path);
@@ -74,10 +76,16 @@ int main(int argc, const char *argv[]) {
 
     const char *file_out_path = DEFAULT_OUT_FILE;
 
-    get_outfile_name_from_flug(&file_out_path, argc, argv);
+    get_outfile_name_from_flag(&file_out_path, argc, argv);
     assert(file_out_path != nullptr);
     
     write_commands_to_file(file_out_path, program, program_size);
+
+    free(program);
+
+    FREE_BUFF;
+
+    free(text);
 }
 
 
@@ -87,13 +95,13 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
     assert(text    != nullptr);
     assert(program != nullptr);
 
-    goto_flug goto_flugs[MAX_FLUG_NUMBER] = {0};
+    goto_flag goto_flags[MAX_flag_NUMBER] = {0};
 
-    goto_flug *end_flugs = goto_flugs;
+    goto_flag *end_flags = goto_flags;
     
     size_t program_size = SIZE_SIGNATURE + SIZE_COMMAND_VERSION + SIZE_PROGRAM_SIZE_CONST;
 
-    first_iteration(&program_size, goto_flugs, &end_flugs, text_size, text);
+    first_iteration(&program_size, goto_flags, &end_flags, text_size, text);
 
     *program = (char *)calloc(program_size, sizeof(char));
     assert(*program != nullptr);
@@ -102,19 +110,19 @@ size_t text_to_program(char **program, KR_string *text, size_t text_size) {
 
     write_additional_data(&program_ptr, program_size);
 
-    second_iteration(&program_ptr, goto_flugs, end_flugs, text_size, text);
+    second_iteration(&program_ptr, goto_flags, end_flags, text_size, text);
 
     return program_size;
 }
 
-bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *goto_flugs, goto_flug *jmp, bool *operand_ext) {
+bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flag *goto_flags, goto_flag *jmp, bool *operand_ext) {
     assert(txt_ptr     != nullptr);
 
     assert(param       != nullptr);
     assert(reg         != nullptr);
     assert(operand     != nullptr);
 
-    assert(goto_flugs  != nullptr);
+    assert(goto_flags  != nullptr);
     assert(jmp         != nullptr);
 
     assert(operand_ext != nullptr);
@@ -130,7 +138,7 @@ bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *got
 
         if (!(*reg)) {
             *operand = -1;
-            for (goto_flug *it = goto_flugs; it < jmp; it++) {
+            for (goto_flag *it = goto_flags; it < jmp; it++) {
                 if (KR_strcmp(param, it->name) == 0) {
                     *operand = (int)it->ptr;
                 }
@@ -150,10 +158,10 @@ bool get_arg(char *txt_ptr, char *param, char *reg, int *operand, goto_flug *got
     return 0;
 }
 
-void get_param(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp, size_t *size) {
+void get_param(KR_string text, char *cmd, goto_flag *goto_flags, goto_flag *jmp, size_t *size) {
     assert(cmd        != nullptr);
 
-    assert(goto_flugs != nullptr);
+    assert(goto_flags != nullptr);
     assert(jmp        != nullptr);
 
     assert(size       != nullptr);
@@ -184,7 +192,7 @@ void get_param(KR_string text, char *cmd, goto_flug *goto_flugs, goto_flug *jmp,
     int operand = 0;
 
     for (int i = 0; i < 2; i++){
-        if (get_arg(txt_ptr, param, &reg, &operand, goto_flugs, jmp, &operand_ext)) {
+        if (get_arg(txt_ptr, param, &reg, &operand, goto_flags, jmp, &operand_ext)) {
             break;
         }
     }
@@ -247,16 +255,16 @@ size_t rid_char(char *begin, char *end, char ch) {
     return count;
 }
 
-void write_flugs(goto_flug *flug_ptr, size_t program_ptr, char *str_begin, char *str_end) {
-    assert(flug_ptr != nullptr);
+void write_flags(goto_flag *flag_ptr, size_t program_ptr, char *str_begin, char *str_end) {
+    assert(flag_ptr != nullptr);
 
     assert(str_begin != nullptr);
     assert(str_end   != nullptr);
 
-    flug_ptr->name.ptr     = str_begin;
-    flug_ptr->name.ptr_end = str_end;
+    flag_ptr->name.ptr     = str_begin;
+    flag_ptr->name.ptr_end = str_end;
 
-    flug_ptr->ptr          = program_ptr;
+    flag_ptr->ptr          = program_ptr;
 }
 
 char reg_to_num(char *str) {
@@ -281,16 +289,16 @@ void write_additional_data(char **program_ptr, size_t program_size) {
     *program_ptr += sizeof(size_t);
 }
 
-bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char *txt_end) {
+bool get_flag(size_t *program_size, goto_flag **end_flags, char *txt_begin, char *txt_end) {
     assert(program_size != nullptr);
-    assert(end_flugs    != nullptr);
+    assert(end_flags    != nullptr);
     assert(txt_begin    != nullptr);
     assert(txt_end      != nullptr);
 
     for (char *cmd_ptr = txt_begin; cmd_ptr <= txt_end; cmd_ptr++) {
         if (*cmd_ptr == ':') {
-            write_flugs(*end_flugs, *program_size, txt_begin, cmd_ptr);
-            (*end_flugs)++;
+            write_flags(*end_flags, *program_size, txt_begin, cmd_ptr);
+            (*end_flags)++;
 
             return true;
         }
@@ -299,16 +307,16 @@ bool get_flug(size_t *program_size, goto_flug **end_flugs, char *txt_begin, char
     return false;
 }
 
-void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **end_flugs, size_t text_size, KR_string *text) {
+void first_iteration(size_t *program_size, goto_flag *goto_flags, goto_flag **end_flags, size_t text_size, KR_string *text) {
     assert(program_size != nullptr);
-    assert(goto_flugs   != nullptr);
-    assert(end_flugs    != nullptr);
+    assert(goto_flags   != nullptr);
+    assert(end_flags    != nullptr);
     assert(text         != nullptr);
 
     char cmd[MAX_COMMAND_SIZE] = {0};
 
     for (size_t i = 0; i < text_size; i++) {
-        if (get_flug(program_size, end_flugs, text[i].ptr, text[i].ptr_end)) {
+        if (get_flag(program_size, end_flags, text[i].ptr, text[i].ptr_end)) {
             continue;
         }
 
@@ -317,7 +325,7 @@ void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **en
         #define DEF_CMD(CMD, NUM, ARG, CODE) if (eq_command(text[i].ptr, #CMD, sizeof(#CMD))) {            \
                                                 *cmd = NUM;cmd_size++;                                         \
                                                 if(ARG){                                                       \
-                                                get_param(text[i], cmd + 1, goto_flugs, *end_flugs, &cmd_size);\
+                                                get_param(text[i], cmd + 1, goto_flags, *end_flags, &cmd_size);\
                                                 }                                                              \
                                             }
 
@@ -329,10 +337,10 @@ void first_iteration(size_t *program_size, goto_flug *goto_flugs, goto_flug **en
     }
 }
 
-void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_flugs, size_t text_size, KR_string *text) {
+void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_flags, size_t text_size, KR_string *text) {
     assert(program_ptr != nullptr);
-    assert(goto_flugs  != nullptr);
-    assert(end_flugs   != nullptr);
+    assert(goto_flags  != nullptr);
+    assert(end_flags   != nullptr);
     assert(text        != nullptr);
 
     for (size_t i = 0; i < text_size; i++) {
@@ -346,7 +354,7 @@ void second_iteration(char **program_ptr, goto_flug *goto_flugs, goto_flug *end_
                                                     **program_ptr = NUM;                                                      \
                                                     cmd_size++;                                                              \
                                                     if (ARG) {                                                               \
-                                                        get_param(text[i], (*program_ptr) + 1, goto_flugs, end_flugs, &cmd_size);\
+                                                        get_param(text[i], (*program_ptr) + 1, goto_flags, end_flags, &cmd_size);\
                                                         }                                                                    \
                                                     }
 

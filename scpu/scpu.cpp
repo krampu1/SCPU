@@ -1,4 +1,4 @@
-#define GRAPHICS
+//#define GRAPHICS
 
 //#pragma GCC diagnostic ignored "-Weffc++"
 
@@ -10,6 +10,7 @@
 #include <SFML/Graphics.hpp>
 #include <limits>
 #include <strings.h>
+#include <string.h>
 
 #define Type_t int
 #include "../stack/stack.h"
@@ -48,7 +49,7 @@ int pop(Cpu *cpu);
 int main(int argc, const char *argv[]) {
     const char *file_in_path = nullptr;
 
-    get_infile_name_from_flug(&file_in_path, argc, argv);
+    get_infile_name_from_flag(&file_in_path, argc, argv);
     assert(file_in_path != nullptr);
 
     FILE *program_file = fopen(file_in_path, "rb");
@@ -129,7 +130,7 @@ int do_cpu(Cpu *cpu) {
     sf::VertexArray pointmap(sf::Points, MEM_W * PIXEL_SIZE * MEM_H * PIXEL_SIZE);
 #endif
     while(true) {
-        bool end_flug = false;
+        bool end_flag = false;
         
         switch (cpu->program[cpu->ip++]) {
             #define DEF_CMD(CMD, NUM, ARG, CODE) case NUM: {CODE break;}
@@ -145,7 +146,7 @@ int do_cpu(Cpu *cpu) {
             }
         }
 
-        if (end_flug) {
+        if (end_flag) {
             break;
         }
 #ifdef GRAPHICS
@@ -157,7 +158,7 @@ int do_cpu(Cpu *cpu) {
 #ifdef GRAPHICS
     window_pause(&window, &pointmap);
 #endif
-    printf("END PROGRAM");
+    printf("END PROGRAM\n");
     return 0;
 }
 
