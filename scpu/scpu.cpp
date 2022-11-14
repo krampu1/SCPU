@@ -29,7 +29,7 @@ struct Calloc_info {
     void *ptr;
 
     size_t      line;
-    const char *funk;
+    const char *func;
     const char *file;
 };
 
@@ -55,11 +55,11 @@ int pop(Cpu *cpu);
 Calloc_info calloced[MAX_CALLOC] = {0};
 size_t first_free_calloced = 0;
 
-void * free_mas[MAX_CALLOC] = {0};
-size_t first_free_in_free_mas = 0;
+void * Free[MAX_CALLOC] = {0};
+size_t first_free_in_Free = 0;
 
 
-void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *funk, const char *file);
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *func, const char *file);
 #define my_calloc(_NumOfElements, _SizeOfElements) _my_calloc(_NumOfElements, _SizeOfElements, __LINE__, __FUNCTION__, __FILE__)
 
 void my_free(void *ptr);
@@ -343,7 +343,7 @@ int pop(Cpu *cpu) {
     return 0;
 }
 
-void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *funk, const char *file) {
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *func, const char *file) {
     if (first_free_calloced == MAX_CALLOC) {
         return nullptr;
     }
@@ -351,31 +351,31 @@ void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, co
     calloced[first_free_calloced].ptr = calloc(_NumOfElements, _SizeOfElements);
 
     calloced[first_free_calloced].line = line;
-    calloced[first_free_calloced].funk = funk;
+    calloced[first_free_calloced].func = func;
     calloced[first_free_calloced].file = file;
 
     return calloced[first_free_calloced++].ptr;
 }
 
 void my_free(void * ptr) {
-    if (first_free_in_free_mas == MAX_CALLOC) {
+    if (first_free_in_Free == MAX_CALLOC) {
         return;
     }
-    free_mas[first_free_in_free_mas++] = ptr;
+    Free[first_free_in_Free++] = ptr;
     free(ptr);
 }
 
 void check_calloced() {
     for (size_t i = 0; i < MAX_CALLOC; i++) {
         if (!is_free(calloced[i].ptr) && calloced[i].ptr) {
-            printf("not free: %p %Iu %s %s\n", calloced[i].ptr, calloced[i].line, calloced[i].funk, calloced[i].file);
+            printf("memory leak: ptr = \"%p\" , calloced in line \"%I64u\" in func \"%s\" in file \"%s\"\n", calloced[i].ptr, calloced[i].line, calloced[i].func, calloced[i].file);
         }
     }
 }
 
 bool is_free(void *ptr) {
     for (size_t i = 0; i < MAX_CALLOC; i++) {
-        if (ptr == free_mas[i]) {
+        if (ptr == Free[i]) {
             return true;
         }
     }
