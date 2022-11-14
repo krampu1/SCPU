@@ -28,7 +28,8 @@ struct goto_flag{
 
 #define SET_CHAR(data) *cmd = data; cmd++; (*size)++;
 
-#define FREE_BUFF free(text[0].ptr);
+#define FREE_TEXT   free(text[0].ptr);\
+                    free(text);
 
 void get_param(KR_string text, char *cmd, goto_flag *goto_flags, goto_flag *jmp, size_t *size);
 
@@ -83,9 +84,7 @@ int main(int argc, const char *argv[]) {
 
     free(program);
 
-    FREE_BUFF;
-
-    free(text);
+    FREE_TEXT;
 }
 
 

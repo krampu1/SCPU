@@ -166,6 +166,14 @@ void cpu_des(Cpu *cpu) {
     assert(cpu != nullptr);
 
     free(cpu->program);
+
+    free(cpu->REG);
+
+    free(cpu->RAM);
+
+    stack_del(&(cpu->stack));
+
+    stack_del(&(cpu->calls));
 }
 
 int init_cpu(Cpu *cpu, FILE *program_file) {
@@ -178,15 +186,17 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
     cpu ->RAM = (int *)calloc(MEM_H * MEM_W, sizeof(int));
     assert(cpu->RAM != nullptr);
 
-    char *file_type = (char *)calloc(2, sizeof(char));
+    char *file_type = (char *)calloc(2, sizeof(char)); // 2 - count SIGN char
     assert(file_type != nullptr);
 
-    fread(file_type, sizeof(char), 2, program_file);
+    fread(file_type, sizeof(char), 2, program_file); // 2 - count SIGN char
 
     if (file_type[0] != SIGN_FIRST || file_type[1] != SIGN_SECOND) {
         fprintf(stderr, "NOT COMPILE TYPE FILE");
         return 1;
     }
+
+    free(file_type);
 
     char command_version = 0;
     fread(&command_version, sizeof(char), 1, program_file);
