@@ -28,5 +28,7 @@ const unsigned int FPS = 10;
 
 const size_t REG_SIZE = 5;
 
+const size_t MAX_CALLOC = 10;
+
 
 #endif

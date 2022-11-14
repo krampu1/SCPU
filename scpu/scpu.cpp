@@ -25,6 +25,14 @@ struct Cpu {
     int *RAM;
 };
 
+struct Calloc_info {
+    void *ptr;
+
+    size_t      line;
+    const char *funk;
+    const char *file;
+};
+
 void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu);
 
 int * get_ptr_arg(Cpu *cpu);
@@ -42,6 +50,25 @@ void window_pause(sf::RenderWindow *window, sf::VertexArray *pointmap);
 void draw_window(sf::RenderWindow *window, Cpu *cpu, sf::VertexArray *pointmap);
 
 int pop(Cpu *cpu);
+
+
+Calloc_info calloced[MAX_CALLOC] = {0};
+size_t first_free_calloced = 0;
+
+void * free_mas[MAX_CALLOC] = {0};
+size_t first_free_in_free_mas = 0;
+
+
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *funk, const char *file);
+#define my_calloc(_NumOfElements, _SizeOfElements) _my_calloc(_NumOfElements, _SizeOfElements, __LINE__, __FUNCTION__, __FILE__)
+
+void my_free(void *ptr);
+
+void check_calloced();
+
+bool is_free(void *ptr);
+
+
 
 
 
@@ -65,6 +92,8 @@ int main(int argc, const char *argv[]) {
     do_cpu(&cpu);
 
     cpu_des(&cpu);
+
+    check_calloced();
 }
 
 
@@ -165,11 +194,11 @@ int do_cpu(Cpu *cpu) {
 void cpu_des(Cpu *cpu) {
     assert(cpu != nullptr);
 
-    free(cpu->program);
+    my_free(cpu->program);
 
-    free(cpu->REG);
+    my_free(cpu->REG);
 
-    free(cpu->RAM);
+    my_free(cpu->RAM);
 
     stack_del(&(cpu->stack));
 
@@ -180,13 +209,13 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
     assert(program_file != nullptr);
     assert(cpu != nullptr);
 
-    cpu->REG = (int *)calloc(REG_SIZE, sizeof(int));
+    cpu->REG = (int *)my_calloc(REG_SIZE, sizeof(int));
     assert(cpu->REG != nullptr);
 
-    cpu ->RAM = (int *)calloc(MEM_H * MEM_W, sizeof(int));
+    cpu ->RAM = (int *)my_calloc(MEM_H * MEM_W, sizeof(int));
     assert(cpu->RAM != nullptr);
 
-    char *file_type = (char *)calloc(2, sizeof(char)); // 2 - count SIGN char
+    char *file_type = (char *)my_calloc(2, sizeof(char)); // 2 - count SIGN char
     assert(file_type != nullptr);
 
     fread(file_type, sizeof(char), 2, program_file); // 2 - count SIGN char
@@ -196,7 +225,7 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
         return 1;
     }
 
-    free(file_type);
+    my_free(file_type);
 
     char command_version = 0;
     fread(&command_version, sizeof(char), 1, program_file);
@@ -210,7 +239,7 @@ int init_cpu(Cpu *cpu, FILE *program_file) {
 
     fseek(program_file, 0, SEEK_SET);
 
-    cpu->program = (char *) calloc(cpu->program_size, sizeof(char));
+    cpu->program = (char *) my_calloc(cpu->program_size, sizeof(char));
     assert(cpu->program != nullptr);
 
     fread(cpu->program, cpu->program_size, sizeof(char), program_file);
@@ -312,4 +341,43 @@ int pop(Cpu *cpu) {
     }
 
     return 0;
+}
+
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *funk, const char *file) {
+    if (first_free_calloced == MAX_CALLOC) {
+        return nullptr;
+    }
+
+    calloced[first_free_calloced].ptr = calloc(_NumOfElements, _SizeOfElements);
+
+    calloced[first_free_calloced].line = line;
+    calloced[first_free_calloced].funk = funk;
+    calloced[first_free_calloced].file = file;
+
+    return calloced[first_free_calloced++].ptr;
+}
+
+void my_free(void * ptr) {
+    if (first_free_in_free_mas == MAX_CALLOC) {
+        return;
+    }
+    free_mas[first_free_in_free_mas++] = ptr;
+    free(ptr);
+}
+
+void check_calloced() {
+    for (size_t i = 0; i < MAX_CALLOC; i++) {
+        if (!is_free(calloced[i].ptr) && calloced[i].ptr) {
+            printf("not free: %p %Iu %s %s\n", calloced[i].ptr, calloced[i].line, calloced[i].funk, calloced[i].file);
+        }
+    }
+}
+
+bool is_free(void *ptr) {
+    for (size_t i = 0; i < MAX_CALLOC; i++) {
+        if (ptr == free_mas[i]) {
+            return true;
+        }
+    }
+    return false;
 }
