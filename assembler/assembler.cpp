@@ -6,6 +6,7 @@
 #include <cstring>
 #include <ctype.h>
 #include "../scpu/scpu.h"
+#include <Windows.h>
 
 const size_t MAX_MET_SIZE            = 20;
 
@@ -20,6 +21,12 @@ const size_t MAX_COMMAND_SIZE        = 30;
 const size_t MAX_flag_NUMBER         = 100;
 
 const char  *DEFAULT_OUT_FILE        = "a.ksc";
+
+const size_t MAX_PROGRESS_BAR_LEN    = 100;
+
+const unsigned char GRAY                      = 177;
+
+const unsigned char BLACK                     = 219;
 
 struct goto_flag{
     KR_string name;
@@ -56,6 +63,14 @@ void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_
 bool get_flag(size_t *program_size, goto_flag **end_flags, char *txt_begin, char *txt_end);
 
 bool eq_command(const char *str, const char *cmd, size_t cmd_size);
+
+#define init_progres_bar(str)   printf("%s\n\r", str);                                               \
+                                for (size_t i = 0; i < MAX_PROGRESS_BAR_LEN; i++) printf("%c", GRAY);\
+                                printf("\r");
+
+void write_progress_bar(size_t progress);
+
+void end_bar();
 
 
 
@@ -314,18 +329,20 @@ void first_iteration(size_t *program_size, goto_flag *goto_flags, goto_flag **en
 
     char cmd[MAX_COMMAND_SIZE] = {0};
 
-    for (size_t i = 0; i < text_size; i++) {
-        if (get_flag(program_size, end_flags, text[i].ptr, text[i].ptr_end)) {
+    init_progres_bar("start first iteration");
+
+    for (size_t command_iterator = 0; command_iterator < text_size; command_iterator++) {
+        if (get_flag(program_size, end_flags, text[command_iterator].ptr, text[command_iterator].ptr_end)) {
             continue;
         }
 
         size_t cmd_size = 0;
 
-        #define DEF_CMD(CMD, NUM, ARG, CODE) if (eq_command(text[i].ptr, #CMD, sizeof(#CMD))) {            \
-                                                *cmd = NUM;cmd_size++;                                         \
-                                                if(ARG){                                                       \
-                                                get_param(text[i], cmd + 1, goto_flags, *end_flags, &cmd_size);\
-                                                }                                                              \
+        #define DEF_CMD(CMD, NUM, ARG, CODE) if (eq_command(text[command_iterator].ptr, #CMD, sizeof(#CMD))) {                \
+                                                *cmd = NUM;cmd_size++;                                                        \
+                                                if(ARG){                                                                      \
+                                                get_param(text[command_iterator], cmd + 1, goto_flags, *end_flags, &cmd_size);\
+                                                }                                                                             \
                                             }
 
         #include "../commands/commands.h"
@@ -333,7 +350,11 @@ void first_iteration(size_t *program_size, goto_flag *goto_flags, goto_flag **en
         #undef DEF_CMD
 
         *program_size += cmd_size;
+
+        write_progress_bar(((command_iterator + 1) * MAX_PROGRESS_BAR_LEN) / text_size);
     }
+
+    end_bar();
 }
 
 void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_flags, size_t text_size, KR_string *text) {
@@ -342,18 +363,20 @@ void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_
     assert(end_flags   != nullptr);
     assert(text        != nullptr);
 
-    for (size_t i = 0; i < text_size; i++) {
-        if (KR_strchr(text[i].ptr, ':')) {
+    init_progres_bar("start second iteration");
+
+    for (size_t command_iterator = 0; command_iterator < text_size; command_iterator++) {
+        if (KR_strchr(text[command_iterator].ptr, ':')) {
             continue;
         }
 
         size_t cmd_size = 0;
 
-        #define DEF_CMD(CMD, NUM, ARG, CODE)    if (eq_command(text[i].ptr, #CMD, sizeof(#CMD))) {                       \
+        #define DEF_CMD(CMD, NUM, ARG, CODE)    if (eq_command(text[command_iterator].ptr, #CMD, sizeof(#CMD))) {                       \
                                                     **program_ptr = NUM;                                                      \
                                                     cmd_size++;                                                              \
                                                     if (ARG) {                                                               \
-                                                        get_param(text[i], (*program_ptr) + 1, goto_flags, end_flags, &cmd_size);\
+                                                        get_param(text[command_iterator], (*program_ptr) + 1, goto_flags, end_flags, &cmd_size);\
                                                         }                                                                    \
                                                     }
 
@@ -362,7 +385,11 @@ void second_iteration(char **program_ptr, goto_flag *goto_flags, goto_flag *end_
         #undef DEF_CMD
 
         *program_ptr += cmd_size;
+
+        write_progress_bar(((command_iterator + 1) * MAX_PROGRESS_BAR_LEN) / text_size);
     }
+
+    end_bar();
 }
 
 bool eq_command(const char *str, const char *cmd, size_t cmd_size) {
@@ -374,4 +401,23 @@ bool eq_command(const char *str, const char *cmd, size_t cmd_size) {
     sscanf(str, "%s", read_cmd);
 
     return (strncmp(read_cmd, cmd, cmd_size) == 0);
+}
+
+
+
+void write_progress_bar(size_t progress) {
+    static size_t lastprogress = 0;
+    if (progress < lastprogress) {
+        lastprogress = 0;
+    }
+    if (lastprogress != progress) {
+        do {
+            printf("%c", BLACK);
+            lastprogress++;
+        } while (lastprogress < progress);
+    }
+}
+
+void end_bar() {
+     printf("\rcomplit\n");
 }

@@ -1,4 +1,4 @@
-//#define GRAPHICS
+#define GRAPHICS
 
 //#pragma GCC diagnostic ignored "-Weffc++"
 
@@ -25,12 +25,16 @@ struct Cpu {
     int *RAM;
 };
 
-struct Calloc_info {
-    void *ptr;
-
+struct Line_info {
     size_t      line;
     const char *func;
     const char *file;
+};
+
+struct Calloc_info {
+    void *ptr;
+
+    Line_info info;
 };
 
 void get_jmp_param(int *a, int *b, int *arg, Cpu *cpu);
@@ -59,14 +63,16 @@ void * Free[MAX_CALLOC] = {0};
 size_t first_free_in_Free = 0;
 
 
-void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *func, const char *file);
-#define my_calloc(_NumOfElements, _SizeOfElements) _my_calloc(_NumOfElements, _SizeOfElements, __LINE__, __FUNCTION__, __FILE__)
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, Line_info info);
+#define my_calloc(_NumOfElements, _SizeOfElements) _my_calloc(_NumOfElements, _SizeOfElements, (Line_info){__LINE__, __FUNCTION__, __FILE__})
 
 void my_free(void *ptr);
 
 void check_calloced();
 
 bool is_free(void *ptr);
+
+void printf_line_info(Line_info info);
 
 
 
@@ -198,7 +204,7 @@ void cpu_des(Cpu *cpu) {
 
     my_free(cpu->REG);
 
-    my_free(cpu->RAM);
+    //my_free(cpu->RAM);
 
     stack_del(&(cpu->stack));
 
@@ -343,16 +349,14 @@ int pop(Cpu *cpu) {
     return 0;
 }
 
-void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, size_t line, const char *func, const char *file) {
+void * _my_calloc(size_t _NumOfElements, size_t _SizeOfElements, Line_info info) {
     if (first_free_calloced == MAX_CALLOC) {
         return nullptr;
     }
 
     calloced[first_free_calloced].ptr = calloc(_NumOfElements, _SizeOfElements);
 
-    calloced[first_free_calloced].line = line;
-    calloced[first_free_calloced].func = func;
-    calloced[first_free_calloced].file = file;
+    calloced[first_free_calloced].info = info;
 
     return calloced[first_free_calloced++].ptr;
 }
@@ -365,10 +369,16 @@ void my_free(void * ptr) {
     free(ptr);
 }
 
+void printf_line_info(Line_info info) {
+    printf("in line \"%I64u\" in func \"%s\" in file \"%s\"", info.line, info.func, info.file);
+}
+
 void check_calloced() {
     for (size_t i = 0; i < MAX_CALLOC; i++) {
         if (!is_free(calloced[i].ptr) && calloced[i].ptr) {
-            printf("memory leak: ptr = \"%p\" , calloced in line \"%I64u\" in func \"%s\" in file \"%s\"\n", calloced[i].ptr, calloced[i].line, calloced[i].func, calloced[i].file);
+            printf("memory leak: ptr = \"%p\" , calloced ", calloced[i].ptr);
+            printf_line_info(calloced[i].info);
+            printf("\n");
         }
     }
 }
